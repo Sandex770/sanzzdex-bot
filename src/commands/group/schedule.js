@@ -2,7 +2,7 @@ import Group from '../../database/models/Group.js';
 
 export default {
     name: 'schedule',
-    aliases: ['jadwal', 'autoschedule'],
+    aliases: ['autoschedule'],
     description: 'Lihat jadwal auto open/close grup',
     category: 'Group',
     execute: async (sock, m) => {
