@@ -1,0 +1,32 @@
+{
+  "accGroups": [],
+  "jadwal": {
+    "senin": [
+      {
+        "id": "dasar-pemrograman",
+        "nama": "Dasar Pemrograman",
+        "jam_masuk": "08:00",
+        "jam_keluar": "09:30",
+        "ruangan": "208",
+        "dosen": "Pak Budi",
+        "note": ""
+      },
+      {
+        "id": "basis-data",
+        "nama": "Basis Data",
+        "jam_masuk": "09:45",
+        "jam_keluar": "11:30",
+        "ruangan": "208",
+        "dosen": "Bu Ani",
+        "note": ""
+      }
+    ],
+    "selasa": [],
+    "rabu": [],
+    "kamis": [],
+    "jumat": [],
+    "sabtu": [],
+    "minggu": []
+  },
+  "jamPengganti": {}
+}
