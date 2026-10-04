@@ -9,6 +9,7 @@ import { registerRecurringTasks, registerSocketEvents } from './lib/botRuntime.j
 import { jadibotService } from './services/jadibotService.js';
 import { installProcessGuards } from './lib/appSetup.js';
 import { createTransport } from './wa/client.js';
+import { startJadwalScheduler } from './lib/jadwalScheduler.js';
 
 let activeSocket = null;
 let backgroundTasksStarted = false;
@@ -39,16 +40,17 @@ const startBot = async () => {
         connectToWhatsApp: startBot,
         authFolder: transport.authFolder,
         onOpen: () => {
-            if (!backgroundTasksStarted) {
-                startPrayerScheduler(sock);
-                if (!global.isGroupSchedulerStarted) {
-                    startGroupScheduler(() => activeSocket);
-                    global.isGroupSchedulerStarted = true;
-                }
-                backgroundTasksStarted = true;
-                jadibotService.init();
-            }
-        },
+    if (!backgroundTasksStarted) {
+        startPrayerScheduler(sock);
+        startJadwalScheduler(() => activeSocket);   // ← TAMBAHKAN INI
+        if (!global.isGroupSchedulerStarted) {
+            startGroupScheduler(() => activeSocket);
+            global.isGroupSchedulerStarted = true;
+        }
+        backgroundTasksStarted = true;
+        jadibotService.init();
+    }
+},
     });
 
     if (typeof transport.connect === 'function') await transport.connect();
