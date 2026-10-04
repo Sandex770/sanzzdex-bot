@@ -25,6 +25,7 @@ import { getBotIdentity, checkOwner, checkJoinGroup, isOwnerAdminInGroup } from 
 import { handleDeleteServerConfirmation } from '../middlewares/deleteServer.js';
 import { getCachedGroupMetadata, refreshGroupMetadata } from '../middlewares/group.js';
 import { recordWerewolfPrivateContact } from '../games/werewolf/service.js';
+import { canRunCommand } from '../services/accGrupService.js';
 
 export { clearSettingsCache } from './messageFlow.js';
 
@@ -159,6 +160,13 @@ export const messageHandler = async (sock, m) => {
                 [...commands.values()].find((c) => c.aliases?.includes(cmdName));
 
             if (command) {
+                // ===== ACC GROUP FILTER =====
+                // Owner selalu bypass. Non-owner hanya boleh di grup yang di-acc.
+                // Grup non-acc / DM user biasa  drop total (diam).
+                const allowed = await canRunCommand(m.chat, isOwner);
+                if (!allowed) return;
+                // =============================
+
                 if (groupData?.mute && !isOwner) {
                     let participants = m.metadata?.participants;
                     if (!participants) {
@@ -183,7 +191,7 @@ export const messageHandler = async (sock, m) => {
                     const isOwnerAdmin = await isOwnerAdminInGroup(sock, m, botSettings);
                     if (!isOwnerAdmin) {
                         return m.reply(
-                            '🔒 *AKSES TERBATAS*\n\nFitur RPG saat ini sedang dalam masa uji coba tertutup dan hanya dapat digunakan di grup yang memiliki Owner bot sebagai Admin.'
+                            ' *AKSES TERBATAS*\n\nFitur RPG saat ini sedang dalam masa uji coba tertutup dan hanya dapat digunakan di grup yang memiliki Owner bot sebagai Admin.'
                         );
                     }
                 }
@@ -217,7 +225,7 @@ export const messageHandler = async (sock, m) => {
                     logger.error(err, `Error in command: ${cmdName}`);
 
                     const { ownerJid } = getBotIdentity(sock);
-                    const errorMsg = ` *COMMAND ERROR REPORT*\n\n➛ *Command:* ${cmdName}\n➛ *Sender:* @${m.sender.split('@')[0]}\n➛ *Error:* ${err.message}\n\n\`\`\`${err.stack}\`\`\``;
+                    const errorMsg = ` *COMMAND ERROR REPORT*\n\n *Command:* ${cmdName}\n *Sender:* @${m.sender.split('@')[0]}\n *Error:* ${err.message}\n\n\`\`\`${err.stack}\`\`\``;
                     await sock
                         .sendMessage(ownerJid, { text: errorMsg, mentions: [m.sender] })
                         .catch(() => {});
