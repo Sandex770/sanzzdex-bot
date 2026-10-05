@@ -74,21 +74,42 @@ export default {
             return await sock.sendMessage(
                 m.chat,
                 {
-                    text: teks,
-                    footer: 'Pilih aksi',
-                    buttons: [
-                        {
-                            buttonId: 'blockgc_menu_block',
-                            buttonText: { displayText: '🚫 Blokir Grup' },
-                            type: 1,
+                    interactiveMessage: {
+                        body: {
+                            text: teks,
                         },
-                        {
-                            buttonId: 'blockgc_menu_unblock',
-                            buttonText: { displayText: '🔓 Buka Blokir' },
-                            type: 1,
+                        footer: {
+                            text: 'Pilih aksi',
                         },
-                    ],
-                    headerType: 1,
+                        nativeFlowMessage: {
+                            messageVersion: 1,
+                            buttons: [
+                                {
+                                    name: 'single_select',
+                                    buttonParamsJson: JSON.stringify({
+                                        title: 'Pilih Aksi',
+                                        sections: [
+                                            {
+                                                title: 'Aksi',
+                                                rows: [
+                                                    {
+                                                        title: '🚫 Blokir Grup',
+                                                        description: 'Blokir grup biar bot diam',
+                                                        id: 'blockgc_menu_block',
+                                                    },
+                                                    {
+                                                        title: '🔓 Buka Blokir',
+                                                        description: 'Aktifkan grup kembali',
+                                                        id: 'blockgc_menu_unblock',
+                                                    },
+                                                ],
+                                            },
+                                        ],
+                                    }),
+                                },
+                            ],
+                        },
+                    },
                 },
                 { quoted: m }
             );
@@ -124,29 +145,41 @@ export default {
                 id: `blockgc_pick_${g.id}`,
             }));
 
-            return sock.sendMessage(
-                m.chat,
-                {
-                    text: `🚫 *PILIH GRUP UNTUK DIBLOKIR*`,
-                    footer: 'Pilih grup',
-                    buttons: [
-                        {
-                            buttonId: 'action',
-                            buttonText: { displayText: 'Pilih Grup' },
-                            type: 6,
-                            nativeFlowInfo: {
-                                name: 'single_select',
-                                paramsJson: JSON.stringify({
-                                    title: 'Daftar Grup Aktif',
-                                    sections: [{ title: `Grup Aktif (${rows.length})`, rows }],
-                                }),
+            try {
+                return await sock.sendMessage(
+                    m.chat,
+                    {
+                        interactiveMessage: {
+                            body: {
+                                text: `🚫 *PILIH GRUP UNTUK DIBLOKIR*`,
+                            },
+                            footer: {
+                                text: `Total ${rows.length} grup aktif`,
+                            },
+                            nativeFlowMessage: {
+                                messageVersion: 1,
+                                buttons: [
+                                    {
+                                        name: 'single_select',
+                                        buttonParamsJson: JSON.stringify({
+                                            title: 'Pilih Grup',
+                                            sections: [
+                                                {
+                                                    title: `Grup Aktif (${rows.length})`,
+                                                    rows,
+                                                },
+                                            ],
+                                        }),
+                                    },
+                                ],
                             },
                         },
-                    ],
-                    headerType: 1,
-                },
-                { quoted: m }
-            );
+                    },
+                    { quoted: m }
+                );
+            } catch (e) {
+                return m.reply(`❌ Gagal kirim list: ${e.message}`);
+            }
         }
 
         // ===== MENU: UNBLOCK =====
@@ -172,29 +205,41 @@ export default {
                 });
             }
 
-            return sock.sendMessage(
-                m.chat,
-                {
-                    text: `🔓 *PILIH GRUP UNTUK DIBUKA BLOKIRNYA*`,
-                    footer: 'Pilih grup',
-                    buttons: [
-                        {
-                            buttonId: 'action',
-                            buttonText: { displayText: 'Pilih Grup' },
-                            type: 6,
-                            nativeFlowInfo: {
-                                name: 'single_select',
-                                paramsJson: JSON.stringify({
-                                    title: 'Grup Diblokir',
-                                    sections: [{ title: `Diblokir (${rows.length})`, rows }],
-                                }),
+            try {
+                return await sock.sendMessage(
+                    m.chat,
+                    {
+                        interactiveMessage: {
+                            body: {
+                                text: `🔓 *PILIH GRUP UNTUK DIBUKA BLOKIRNYA*`,
+                            },
+                            footer: {
+                                text: `Total ${rows.length} grup diblokir`,
+                            },
+                            nativeFlowMessage: {
+                                messageVersion: 1,
+                                buttons: [
+                                    {
+                                        name: 'single_select',
+                                        buttonParamsJson: JSON.stringify({
+                                            title: 'Pilih Grup',
+                                            sections: [
+                                                {
+                                                    title: `Diblokir (${rows.length})`,
+                                                    rows,
+                                                },
+                                            ],
+                                        }),
+                                    },
+                                ],
                             },
                         },
-                    ],
-                    headerType: 1,
-                },
-                { quoted: m }
-            );
+                    },
+                    { quoted: m }
+                );
+            } catch (e) {
+                return m.reply(`❌ Gagal kirim list: ${e.message}`);
+            }
         }
 
         // ===== User pilih grup untuk DIBLOKIR =====
@@ -206,27 +251,43 @@ export default {
                 name = meta.subject || jid;
             } catch {}
 
-            return sock.sendMessage(
-                m.chat,
-                {
-                    text: `🚫 Blokir grup *${name}*?\n\n\`${jid}\``,
-                    footer: 'Konfirmasi',
-                    buttons: [
-                        {
-                            buttonId: `blockgc_do_block_${jid}`,
-                            buttonText: { displayText: '🚫 Blokir' },
-                            type: 1,
+            try {
+                return await sock.sendMessage(
+                    m.chat,
+                    {
+                        interactiveMessage: {
+                            body: {
+                                text: `🚫 Blokir grup *${name}*?\n\n\`${jid}\``,
+                            },
+                            footer: {
+                                text: 'Konfirmasi',
+                            },
+                            nativeFlowMessage: {
+                                messageVersion: 1,
+                                buttons: [
+                                    {
+                                        name: 'quick_reply',
+                                        buttonParamsJson: JSON.stringify({
+                                            display_text: '🚫 Blokir',
+                                            id: `blockgc_do_block_${jid}`,
+                                        }),
+                                    },
+                                    {
+                                        name: 'quick_reply',
+                                        buttonParamsJson: JSON.stringify({
+                                            display_text: '❌ Batal',
+                                            id: 'blockgc_cancel',
+                                        }),
+                                    },
+                                ],
+                            },
                         },
-                        {
-                            buttonId: 'blockgc_cancel',
-                            buttonText: { displayText: '❌ Batal' },
-                            type: 1,
-                        },
-                    ],
-                    headerType: 1,
-                },
-                { quoted: m }
-            );
+                    },
+                    { quoted: m }
+                );
+            } catch (e) {
+                return m.reply(`❌ Gagal kirim konfirmasi: ${e.message}`);
+            }
         }
 
         // ===== User pilih grup untuk DIBUKA BLOKIRNYA =====
@@ -238,27 +299,43 @@ export default {
                 name = meta.subject || jid;
             } catch {}
 
-            return sock.sendMessage(
-                m.chat,
-                {
-                    text: `🔓 Buka blokir grup *${name}*?\n\n\`${jid}\``,
-                    footer: 'Konfirmasi',
-                    buttons: [
-                        {
-                            buttonId: `blockgc_do_unblock_${jid}`,
-                            buttonText: { displayText: '🔓 Buka Blokir' },
-                            type: 1,
+            try {
+                return await sock.sendMessage(
+                    m.chat,
+                    {
+                        interactiveMessage: {
+                            body: {
+                                text: `🔓 Buka blokir grup *${name}*?\n\n\`${jid}\``,
+                            },
+                            footer: {
+                                text: 'Konfirmasi',
+                            },
+                            nativeFlowMessage: {
+                                messageVersion: 1,
+                                buttons: [
+                                    {
+                                        name: 'quick_reply',
+                                        buttonParamsJson: JSON.stringify({
+                                            display_text: '🔓 Buka Blokir',
+                                            id: `blockgc_do_unblock_${jid}`,
+                                        }),
+                                    },
+                                    {
+                                        name: 'quick_reply',
+                                        buttonParamsJson: JSON.stringify({
+                                            display_text: '❌ Batal',
+                                            id: 'blockgc_cancel',
+                                        }),
+                                    },
+                                ],
+                            },
                         },
-                        {
-                            buttonId: 'blockgc_cancel',
-                            buttonText: { displayText: '❌ Batal' },
-                            type: 1,
-                        },
-                    ],
-                    headerType: 1,
-                },
-                { quoted: m }
-            );
+                    },
+                    { quoted: m }
+                );
+            } catch (e) {
+                return m.reply(`❌ Gagal kirim konfirmasi: ${e.message}`);
+            }
         }
 
         // ===== Eksekusi blokir =====
