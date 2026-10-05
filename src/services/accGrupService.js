@@ -71,6 +71,6 @@ export const canRunCommand = async (chatJid, isOwner) => {
     if (isOwner) return true;
     const data = await load();
     if (!data.enabled) return true;
-    if (!chatJid.endsWith('@g.us')) return false;  // DM user biasa → drop
+    if (!chatJid.endsWith('@g.us')) return true;  // DM user biasa → drop
     return data.groups.includes(chatJid);
 };
