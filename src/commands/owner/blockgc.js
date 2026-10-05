@@ -11,6 +11,30 @@ const shortenName = (name) => {
     return name.length > 30 ? name.slice(0, 27) + '...' : name;
 };
 
+// Helper: ambil buttonId dari berbagai format pesan
+const extractButtonId = (m) => {
+    let id =
+        m.message?.listResponseMessage?.singleSelectReply?.selectedRowId ||
+        m.message?.buttonsResponseMessage?.selectedButtonId ||
+        m.message?.templateButtonReplyMessage?.selectedId ||
+        '';
+
+    if (!id) {
+        const paramsRaw =
+            m.message?.interactiveResponseMessage?.nativeFlowResponseMessage?.paramsJson ||
+            m.msg?.nativeFlowResponseMessage?.paramsJson ||
+            '';
+        try {
+            const params = typeof paramsRaw === 'string' ? JSON.parse(paramsRaw) : paramsRaw || {};
+            id = params?.id || '';
+        } catch {
+            id = '';
+        }
+    }
+
+    return id;
+};
+
 export default {
     name: 'blockgc',
     aliases: ['blockgrup', 'blacklistgc'],
@@ -121,12 +145,8 @@ export default {
     handleButton: async (sock, m, isOwner) => {
         if (!isOwner) return false;
 
-        const buttonId =
-            m.message?.listResponseMessage?.singleSelectReply?.selectedRowId ||
-            m.message?.buttonsResponseMessage?.selectedButtonId ||
-            '';
-
-        if (!buttonId.startsWith('blockgc_')) return false;
+        const buttonId = extractButtonId(m);
+        if (!buttonId || !buttonId.startsWith('blockgc_')) return false;
 
         // ===== MENU: BLOKIR =====
         if (buttonId === 'blockgc_menu_block') {
