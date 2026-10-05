@@ -23,18 +23,14 @@ const HARI_INDO = {
 // Format 1 matkul
 const formatMatkul = (mk, index) => {
     const lines = [];
-    lines.push(`${index + 1}.`);
-    lines.push(`Mata Kuliah :`);
-    lines.push(`${mk.nama}`);
-    lines.push(`Jam :`);
-    lines.push(`${mk.jam_masuk} - ${mk.jam_keluar}`);
-    lines.push(`Ruangan :`);
-    lines.push(`${mk.ruangan}`);
-    lines.push(`Dosen :`);
-    lines.push(`${mk.dosen}`);
+    lines.push(`*${index + 1}. ${mk.nama}*`);
+    lines.push('');
+    lines.push(`• *Mata Kuliah :* _${mk.nama}_`);
+    lines.push(`• *Jam :* _${mk.jam_masuk} - ${mk.jam_keluar}_`);
+    lines.push(`• *Ruangan :* _${mk.ruangan}_`);
+    lines.push(`• *Dosen :* _${mk.dosen}_`);
     if (mk.note) {
-        lines.push(`Note :`);
-        lines.push(`${mk.note}`);
+        lines.push(`• *Note :* _${mk.note}_`);
     }
     return lines.join('\n');
 };
@@ -45,8 +41,9 @@ const formatHari = (hari, list) => {
     if (!list.length) {
         return `${title}\n\n📭 _Tidak ada jadwal / libur_`;
     }
-    const matkulStr = list.map((mk, i) => formatMatkul(mk, i)).join('\n\n');
-    return `${title}\n\n${matkulStr}`;
+    const separator = '\n\n───────────────────\n\n';
+    const matkulStr = list.map((mk, i) => formatMatkul(mk, i)).join(separator);
+    return `${title}\n\n${matkulStr}\n\n───────────────────`;
 };
 
 // Extract buttonId (support interactive / native flow)
