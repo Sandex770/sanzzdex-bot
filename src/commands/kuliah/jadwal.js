@@ -1,103 +1,179 @@
-export default {
+import {
+    getJadwalHari,
+    HARI,
+    loadJadwal,
+} from '../../services/jadwalService.js';
+
+// Hari yang ditampilkan di tombol (Senin - Jumat)
+const HARI_BUTTON = ['senin', 'selasa', 'rabu', 'kamis', 'jumat'];
+
+// Hari yang ditampilkan di .jadwalkuliah (Senin - Sabtu)
+const HARI_FULL = ['senin', 'selasa', 'rabu', 'kamis', 'jumat', 'sabtu'];
+
+const HARI_INDO = {
+    senin: 'Senin',
+    selasa: 'Selasa',
+    rabu: 'Rabu',
+    kamis: 'Kamis',
+    jumat: 'Jumat',
+    sabtu: 'Sabtu',
+    minggu: 'Minggu',
+};
+
+// Format 1 matkul
+const formatMatkul = (mk, index) => {
+    const lines = [];
+    lines.push(`${index + 1}.`);
+    lines.push(`Mata Kuliah :`);
+    lines.push(`${mk.nama}`);
+    lines.push(`Jam :`);
+    lines.push(`${mk.jam_masuk} - ${mk.jam_keluar}`);
+    lines.push(`Ruangan :`);
+    lines.push(`${mk.ruangan}`);
+    lines.push(`Dosen :`);
+    lines.push(`${mk.dosen}`);
+    if (mk.note) {
+        lines.push(`Note :`);
+        lines.push(`${mk.note}`);
+    }
+    return lines.join('\n');
+};
+
+// Format 1 hari
+const formatHari = (hari, list) => {
+    const title = `📅 *JADWAL ${HARI_INDO[hari].toUpperCase()}*`;
+    if (!list.length) {
+        return `${title}\n\n📭 _Tidak ada jadwal / libur_`;
+    }
+    const matkulStr = list.map((mk, i) => formatMatkul(mk, i)).join('\n\n');
+    return `${title}\n\n${matkulStr}`;
+};
+
+// Extract buttonId (support interactive / native flow)
+const extractButtonId = (m) => {
+    let id =
+        m.message?.listResponseMessage?.singleSelectReply?.selectedRowId ||
+        m.message?.buttonsResponseMessage?.selectedButtonId ||
+        m.message?.templateButtonReplyMessage?.selectedId ||
+        '';
+
+    if (!id) {
+        const paramsRaw =
+            m.message?.interactiveResponseMessage?.nativeFlowResponseMessage?.paramsJson ||
+            m.msg?.nativeFlowResponseMessage?.paramsJson ||
+            '';
+        try {
+            const params = typeof paramsRaw === 'string' ? JSON.parse(paramsRaw) : paramsRaw || {};
+            id = params?.id || '';
+        } catch {
+            id = '';
+        }
+    }
+
+    return id;
+};
+
+// ========== COMMAND 1: .jadwal (pakai tombol) ==========
+const jadwalCmd = {
     name: 'jadwal',
-    aliases: ['jadwalkuliah'],
-    description: 'Lihat jadwal kuliah. Format: .jadwal [hari]',
+    description: 'Lihat jadwal kuliah (pilih hari lewat tombol)',
+    category: 'Kuliah',
+    execute: async (sock, m) => {
+        const rows = HARI_BUTTON.map((h) => ({
+            title: `📅 ${HARI_INDO[h]}`,
+            description: `Lihat jadwal hari ${HARI_INDO[h]}`,
+            id: `jadwal_pick_${h}`,
+        }));
+
+        try {
+            return await sock.sendMessage(
+                m.chat,
+                {
+                    interactiveMessage: {
+                        body: {
+                            text: `📅 *JADWAL KULIAH*\n\nPilih hari di bawah:`,
+                        },
+                        footer: {
+                            text: 'Pilih hari',
+                        },
+                        nativeFlowMessage: {
+                            messageVersion: 1,
+                            buttons: [
+                                {
+                                    name: 'single_select',
+                                    buttonParamsJson: JSON.stringify({
+                                        title: 'Pilih Hari',
+                                        sections: [
+                                            {
+                                                title: 'Hari Kuliah',
+                                                rows,
+                                            },
+                                        ],
+                                    }),
+                                },
+                            ],
+                        },
+                    },
+                },
+                { quoted: m }
+            );
+        } catch (e) {
+            return m.reply(`❌ Gagal kirim tombol: ${e.message}`);
+        }
+    },
+
+    handleButton: async (sock, m) => {
+        const buttonId = extractButtonId(m);
+        if (!buttonId || !buttonId.startsWith('jadwal_')) return false;
+
+        if (buttonId.startsWith('jadwal_pick_')) {
+            const hari = buttonId.replace('jadwal_pick_', '').toLowerCase();
+            if (!HARI_INDO[hari]) return m.reply('❌ Hari tidak valid.');
+
+            const list = await getJadwalHari(hari);
+            return m.reply(formatHari(hari, list));
+        }
+
+        return false;
+    },
+
+    buttonPrefix: 'jadwal',
+};
+
+// ========== COMMAND 2: .jadwalkuliah (langsung semua) ==========
+const jadwalKuliahCmd = {
+    name: 'jadwalkuliah',
+    aliases: ['jadwalku', 'jkw'],
+    description: 'Lihat semua jadwal kuliah Senin-Sabtu',
     category: 'Kuliah',
     execute: async (sock, m, args) => {
         try {
-            // ===== DEBUG 1: import service =====
-            let svc;
-            try {
-                svc = await import('../../services/jadwalService.js');
-            } catch (e) {
-                return m.reply(`❌ [1] Gagal import jadwalService:\n${e.message}\n\n${e.stack?.split('\n').slice(0, 3).join('\n')}`);
-            }
-
-            const { getJadwalHari, HARI, loadJadwal } = svc;
-
-            if (!getJadwalHari || !HARI) {
-                return m.reply(`❌ [2] Export jadwalService tidak lengkap.\ngetJadwalHari: ${typeof getJadwalHari}\nHARI: ${typeof HARI}`);
-            }
-
-            // ===== DEBUG 2: baca JSON =====
-            try {
-                await loadJadwal();
-            } catch (e) {
-                return m.reply(`❌ [3] loadJadwal gagal:\n${e.message}`);
-            }
-
             const hari = (args[0] || '').toLowerCase();
 
-            if (hari && !HARI.includes(hari)) {
-                return m.reply(`📅 Hari tidak valid.\nPilihan: ${HARI.join(', ')}`);
-            }
-
-            // ===== DEBUG 3: mode hari spesifik =====
+            // Mode hari spesifik (misal .jadwalkuliah senin)
             if (hari) {
-                let list;
-                try {
-                    list = await getJadwalHari(hari);
-                } catch (e) {
-                    return m.reply(`❌ [4] getJadwalHari('${hari}') gagal:\n${e.message}\n${e.stack?.split('\n').slice(0, 3).join('\n')}`);
+                if (!HARI_INDO[hari]) {
+                    return m.reply(`📅 Hari tidak valid.\nPilihan: ${HARI_FULL.join(', ')}`);
                 }
-
-                if (!list || !list.length) {
-                    return m.reply(`📭 Tidak ada jadwal hari *${hari}*.`);
-                }
-
-                return m.reply(formatList(hari, list));
+                const list = await getJadwalHari(hari);
+                return m.reply(formatHari(hari, list));
             }
 
-            // ===== DEBUG 4: mode semua hari =====
-            const lines = [`📅 *JADWAL KULIAH MINGGUAN*`, ''];
-            let adaIsi = false;
-
-            for (const h of HARI) {
-                let list;
-                try {
-                    list = await getJadwalHari(h);
-                } catch (e) {
-                    return m.reply(`❌ [5] Gagal baca hari ${h}:\n${e.message}`);
-                }
-
-                if (!list || !list.length) continue;
-                adaIsi = true;
-                lines.push(`*${h.toUpperCase()}*`);
-                list.forEach((mk, i) => {
-                    lines.push(`  ${i + 1}. ${mk.nama} (${mk.jam_masuk}-${mk.jam_keluar}) - R.${mk.ruangan}`);
-                });
-                lines.push('');
+            // Mode semua hari (Senin - Sabtu)
+            const parts = [`📅 *JADWAL KULIAH MINGGUAN*`];
+            for (const h of HARI_FULL) {
+                const list = await getJadwalHari(h);
+                parts.push('');
+                parts.push(formatHari(h, list));
             }
 
-            if (!adaIsi) {
-                lines.push('📭 Belum ada jadwal yang diisi.');
-                lines.push('');
-                lines.push('Isi dulu di `data/jadwal.json` di VPS.');
-            }
-
-            m.reply(lines.join('\n'));
+            return m.reply(parts.join('\n'));
         } catch (err) {
-            // ===== DEBUG 5: error tak terduga =====
-            const stack = (err.stack || '').split('\n').slice(0, 5).join('\n');
-            return m.reply(
-                `❌ *ERROR*\n` +
-                `Message: ${err.message}\n` +
-                `Name: ${err.name}\n\n` +
-                `Stack:\n${stack}`
-            );
+            console.error('[JADWALKULIAH] Error:', err);
+            return m.reply(`❌ Error: ${err.message}`);
         }
     },
 };
 
-const formatList = (hari, list) => {
-    const lines = [`📅 *JADWAL ${hari.toUpperCase()}*`, ''];
-    list.forEach((mk, i) => {
-        lines.push(`*${i + 1}. ${mk.nama}*`);
-        lines.push(`   🕐 ${mk.jam_masuk} - ${mk.jam_keluar} WIB`);
-        lines.push(`   📍 Ruangan ${mk.ruangan}`);
-        lines.push(`   👤 ${mk.dosen}`);
-        if (mk.note) lines.push(`   📝 _${mk.note}_`);
-        lines.push('');
-    });
-    return lines.join('\n');
-};
+// ========== EXPORT DUA COMMAND ==========
+export default [jadwalCmd, jadwalKuliahCmd];
