@@ -4,6 +4,7 @@ import { commands } from '../lib/commands.js';
 import logger from '../utils/logger.js';
 import { settings } from '../config/settings.js';
 import { saveMessage } from '../lib/msgStore.js';
+import { isGroupBlocked } from '../services/blockgcService.js';
 import {
     getCachedSettings,
     getGroupSettings,
@@ -100,6 +101,12 @@ export const messageHandler = async (sock, m) => {
 
         const isOwner = checkOwner(m, sock, botSettings);
         m.isOwner = isOwner;
+                // ===== BLOCK GROUP FILTER =====
+        // Grup yang diblokir → bot diam total (kecuali owner)
+        if (m.isGroup && !isOwner) {
+            if (await isGroupBlocked(m.chat)) return;
+        }
+        // ==============================
 
         const groupDataPromise =
             m.isGroup && !isOwner && !m.key.fromMe
