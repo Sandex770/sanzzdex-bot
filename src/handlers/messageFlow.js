@@ -448,6 +448,17 @@ export const handleAutoAiPrivate = async (sock, m, botSettings, isOwner = false)
 export const handleOwnerAgentTrigger = async (sock, m, isOwner, usedPrefix) => {
     if (!isOwner || !m.body) return false;
 
+    // ===== SKIP kalau ini pesan tombol / interactive =====
+    // Biar tombol yang nggak ke-handle tetap nggak jatuh ke AI
+    const isButtonInteraction = Boolean(
+        m.message?.buttonsResponseMessage ||
+        m.message?.listResponseMessage ||
+        m.message?.templateButtonReplyMessage ||
+        m.message?.interactiveResponseMessage
+    );
+    if (isButtonInteraction) return false;
+    // ====================================================
+
     const prefixes = [settings.prefix, ...(settings.prefixAliases || [])].filter(Boolean);
     if (usedPrefix || prefixes.some((p) => m.body.trim().startsWith(p))) return false;
 
