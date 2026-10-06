@@ -28,7 +28,14 @@ const kirimKeAccGroups = async (sock, text) => {
         logger.warn('[jadwal] Tidak ada grup ter-acc. Jalankan .accgrup dulu.');
         return;
     }
+
+    logger.info(`[jadwal] Akan kirim ke ${groups.length} grup: ${groups.join(', ')}`);
+
     const video = await getVideoBuffer();
+    logger.info(`[jadwal] Video banner: ${video ? `ADA (${video.length} bytes)` : 'TIDAK ADA'}`);
+
+    let sukses = 0;
+    let gagal = 0;
 
     for (const jid of groups) {
         try {
@@ -42,10 +49,17 @@ const kirimKeAccGroups = async (sock, text) => {
             } else {
                 await sock.sendMessage(jid, { text });
             }
+            sukses++;
+            logger.info(`[jadwal] ✅ Terkirim ke ${jid}`);
+            // Delay 2 detik antar grup biar nggak kena rate limit
+            await new Promise((r) => setTimeout(r, 2000));
         } catch (err) {
-            logger.error(`[jadwal] Gagal kirim ke ${jid}: ${err.message}`);
+            gagal++;
+            logger.error(`[jadwal] ❌ GAGAL kirim ke ${jid}: ${err.message}`);
         }
     }
+
+    logger.info(`[jadwal] Selesai — Sukses: ${sukses}, Gagal: ${gagal}`);
 };
 
 const formatMatkul = (mk, index) => {
@@ -169,7 +183,7 @@ export const startJadwalScheduler = (getSocket) => {
         const m = now.getUTCMinutes();
         const tgl = now.toISOString().slice(0, 10);
 
-        if (h === 20 && m === 0 && lastNotifDate !== tgl) {
+        if (h === 20 && m === 18 && lastNotifDate !== tgl) {
             lastNotifDate = tgl;
             const sock = getSocket();
             if (sock) {
