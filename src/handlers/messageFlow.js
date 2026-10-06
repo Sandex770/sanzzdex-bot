@@ -374,7 +374,13 @@ const handlePollUpdate = async (sock, m) => {
 };
 
 export const handleAutoAiPrivate = async (sock, m, botSettings, isOwner = false) => {
+    // ===== DIMATIKAN SEMENTARA =====
+    return false;
+    // ================================
+
     if (!botSettings?.autoAiPrivate || m.isGroup || m.key.fromMe) return;
+    // ...
+};
 
     const prefixes = [settings.prefix, ...(settings.prefixAliases || [])].filter(Boolean);
     if (m.body && prefixes.some((p) => m.body.trim().startsWith(p))) return;
@@ -446,7 +452,13 @@ export const handleAutoAiPrivate = async (sock, m, botSettings, isOwner = false)
 };
 
 export const handleOwnerAgentTrigger = async (sock, m, isOwner, usedPrefix) => {
+    // ===== DIMATIKAN SEMENTARA =====
+    return false;
+    // ================================
+
     if (!isOwner || !m.body) return false;
+    // ...
+};
 
     // ===== SKIP kalau ini pesan tombol / interactive =====
     // Biar tombol yang nggak ke-handle tetap nggak jatuh ke AI
