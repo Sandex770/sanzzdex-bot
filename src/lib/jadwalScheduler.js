@@ -183,7 +183,7 @@ export const startJadwalScheduler = (getSocket) => {
         const m = now.getUTCMinutes();
         const tgl = now.toISOString().slice(0, 10);
 
-        if (h === 20 && m === 18 && lastNotifDate !== tgl) {
+        if (h === 20 && m === 28 && lastNotifDate !== tgl) {
             lastNotifDate = tgl;
             const sock = getSocket();
             if (sock) {
