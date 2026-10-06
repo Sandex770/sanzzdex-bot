@@ -3,9 +3,18 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import logger from '../utils/logger.js';
 import {
-    getJadwalHari, getJamPengganti, getAccGroups,
-    getHariBesokWIB, getTanggalBesokISO, getHariIniWIB, getTanggalHariIniISO,
-    menitSekarangWIB, jamKeMenit, formatTanggalIndo, HARI,
+    getJadwalHari,
+    getJamPengganti,
+    getAccGroups,
+    getNotifTime,
+    getHariBesokWIB,
+    getTanggalBesokISO,
+    getHariIniWIB,
+    getTanggalHariIniISO,
+    menitSekarangWIB,
+    jamKeMenit,
+    formatTanggalIndo,
+    HARI,
 } from '../services/jadwalService.js';
 
 const VIDEO_PATH = fileURLToPath(new URL('../assets/jadwal-banner.mp4', import.meta.url));
@@ -22,6 +31,7 @@ const getVideoBuffer = async () => {
     }
 };
 
+// ====== KIRIM KE SEMUA GRUP TER-ACC ======
 const kirimKeAccGroups = async (sock, text) => {
     const groups = await getAccGroups();
     if (!groups.length) {
@@ -62,6 +72,7 @@ const kirimKeAccGroups = async (sock, text) => {
     logger.info(`[jadwal] Selesai — Sukses: ${sukses}, Gagal: ${gagal}`);
 };
 
+// ====== FORMAT MATKUL ======
 const formatMatkul = (mk, index) => {
     const lines = [
         `*${index + 1}. ${mk.nama}*`,
@@ -73,12 +84,12 @@ const formatMatkul = (mk, index) => {
     return lines.join('\n');
 };
 
+// ====== NOTIF MALAM ======
 const kirimNotifMalam = async (sock) => {
     const hariBesok = getHariBesokWIB();
     const tglBesok = getTanggalBesokISO();
     const jadwalBesok = await getJadwalHari(hariBesok);
     const pengganti = await getJamPengganti(tglBesok);
-
     const tglFormatted = formatTanggalIndo(tglBesok);
 
     // Kasus 1: ada jadwal reguler
@@ -91,7 +102,9 @@ const kirimNotifMalam = async (sock) => {
             pengganti ? `\n⚠️ *JAM PENGGANTI:*\n${formatMatkul(pengganti, 0)}` : '',
             '',
             'Semangat besok! 💪',
-        ].filter(Boolean).join('\n');
+        ]
+            .filter(Boolean)
+            .join('\n');
         await kirimKeAccGroups(sock, teks);
         logger.info(`[jadwal] Notif malam terkirim (${jadwalBesok.length} matkul)`);
         return;
@@ -125,6 +138,7 @@ const kirimNotifMalam = async (sock) => {
     logger.info('[jadwal] Notif libur terkirim');
 };
 
+// ====== REMINDER 30 MENIT ======
 const cekReminder30Menit = async (sock) => {
     const hariIni = getHariIniWIB();
     const jadwal = await getJadwalHari(hariIni);
@@ -160,6 +174,7 @@ const cekReminder30Menit = async (sock) => {
     }
 };
 
+// ====== START SCHEDULER ======
 export const startJadwalScheduler = (getSocket) => {
     if (global.__jadwalSchedulerStarted) return;
     global.__jadwalSchedulerStarted = true;
@@ -175,18 +190,30 @@ export const startJadwalScheduler = (getSocket) => {
         );
     }, 60 * 1000);
 
-    // Cek notif malam tepat jam 20:00 WIB
-    let lastNotifDate = null;
-    setInterval(() => {
+    // Cek notif malam — jam diambil dari data/jadwal.json
+    setInterval(async () => {
         const now = new Date(Date.now() + 7 * 60 * 60 * 1000);
         const h = now.getUTCHours();
         const m = now.getUTCMinutes();
         const tgl = now.toISOString().slice(0, 10);
 
-        if (h === 20 && m === 28 && lastNotifDate !== tgl) {
-            lastNotifDate = tgl;
+        // Baca jam notif dari config
+        let notifTime = '20:00';
+        try {
+            notifTime = await getNotifTime();
+        } catch (e) {
+            logger.error(`[jadwal] Gagal baca notifTime: ${e.message}`);
+        }
+
+        const [targetH, targetM] = notifTime.split(':').map(Number);
+        const nowStr = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+        const key = `${tgl}:${nowStr}`;
+
+        if (h === targetH && m === targetM && global.__lastNotifKey !== key) {
+            global.__lastNotifKey = key;
             const sock = getSocket();
             if (sock) {
+                logger.info(`[jadwal] 🔔 Trigger notif malam jam ${notifTime} WIB`);
                 kirimNotifMalam(sock).catch((e) =>
                     logger.error(`[jadwal] notif malam error: ${e.message}`)
                 );
