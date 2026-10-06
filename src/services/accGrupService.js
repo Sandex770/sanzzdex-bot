@@ -8,13 +8,16 @@ let cache = null;
 let writeQueue = Promise.resolve();
 
 const load = async () => {
-    if (cache) return cache;
+    // Selalu baca dari file biar sinkron sama perubahan eksternal
     try {
         const raw = await readFile(DATA_PATH, 'utf8');
-        cache = { ...DEFAULT, ...JSON.parse(raw) };
+        const parsed = JSON.parse(raw);
+        cache = { ...DEFAULT, ...parsed };
     } catch {
-        cache = structuredClone(DEFAULT);
-        await save();
+        if (!cache) {
+            cache = structuredClone(DEFAULT);
+            await save();
+        }
     }
     return cache;
 };
